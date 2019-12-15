@@ -42,7 +42,7 @@ public class Startup
 
         // 3. Add Validator locator, if you didn't satisfy container based locator,
         // You just implement IValidatorLocator and register as service. 
-        services.AddValidatorLocator();
+        services.AddGrpcValidation();
     }
     // ...
 }
@@ -72,7 +72,41 @@ public class Startup
 
         // 3. Add Validator locator, if you didn't satisfy container based locator,
         // You just implement IValidatorLocator and register as service. 
-        services.AddValidatorLocator();
+        services.AddGrpcValidation();
+    }
+    // ...
+}
+```
+
+
+#### Customize validation failure message.
+
+If you want to custom validation message handler for using your own error message system,
+Just implement IValidatorErrorMessageHandler and put it service collection.
+
+```csharp
+public class CustomMessageHandler : IValidatorErrorMessageHandler
+{
+    public Task<string> HandleAsync(IList<ValidationFailure> failures)
+    {
+        return Task.FromResult("Validation Error!");
+    }
+}
+
+public class Startup
+{
+    // ...
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddGrpc(options => options.EnableMessageValidation());
+        services.AddInlineValidator<HelloRequest>(rules => rules.RuleFor(request => request.Name).NotEmpty());
+
+        // 1. Just put at service collection your own custom message handler that implement IValidatorErrorMessageHnadler.
+        // This should be placed before calling AddGrpcValidation();
+        services.AddSingleton<IValidatorErrorMessageHanlder>(new CustomMessageHandler())
+
+        // If yor don't reigster any message handler, AddGrpcValidation register default message handler.  
+        services.AddGrpcValidation();
     }
     // ...
 }

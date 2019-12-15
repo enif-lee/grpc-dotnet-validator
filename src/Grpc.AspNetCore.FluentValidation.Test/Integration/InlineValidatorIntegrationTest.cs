@@ -19,7 +19,7 @@ namespace Grpc.AspNetCore.FluentValidation.Test.Integration
                     {
                         rules.RuleFor(r => r.Name).NotEmpty();
                     });
-                    services.AddValidatorLocator();
+                    services.AddGrpcValidation();
                 }));
         }
 
