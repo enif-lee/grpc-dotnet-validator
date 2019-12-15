@@ -121,8 +121,4 @@ If you want to write integration test. [This test sample](src/Grpc.AspNetCore.Fl
 
 This pakage`s versioning is following version of [Grpc.AspNetCore](https://github.com/grpc/grpc-dotnet)
 
-
-## Road Map
-
-- [ ] Provide customizable error message hook.
  
