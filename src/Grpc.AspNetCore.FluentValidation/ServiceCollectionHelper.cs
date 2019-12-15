@@ -30,5 +30,12 @@ namespace Grpc.AspNetCore.FluentValidation
             services.Add(new ServiceDescriptor(serviceType, implementationType, lifetime));
             return services;
         }
+
+        public static IServiceCollection AddInlineValidator<TMessage>(this IServiceCollection services, 
+            Action<AbstractValidator<TMessage>> validator)
+        {
+            services.AddSingleton<IValidator<TMessage>>(new InlineValidator<TMessage>(validator));
+            return services;
+        }
     }
 }
