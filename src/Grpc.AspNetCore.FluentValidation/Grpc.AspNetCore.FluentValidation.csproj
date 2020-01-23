@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <PackageId>GrpcExtensions.AspNetCore.Validation</PackageId>
-        <Version>2.25.1</Version>
+        <Version>2.25.3</Version>
         <Authors>Jinseoung Lee</Authors>
         <PackageTags>grpc;dotnet;validator;validation;request-validation;aspnetcore</PackageTags>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
