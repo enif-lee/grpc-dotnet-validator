@@ -11,23 +11,29 @@ namespace Grpc.AspNetCore.FluentValidation.Test
     {
         public static GrpcChannel CreateGrpcChannel(this WebApplicationFactory<Startup> factory)
         {
-            var client = factory.CreateDefaultClient(new ResponseVersionHandler());
+            return CreateGrpcChannel(factory, new ResponseVersionHandler());
+        }
+        
+        public static GrpcChannel CreateGrpcChannel(this WebApplicationFactory<Startup> factory, DelegatingHandler handler)
+        {
+            var client = factory.CreateDefaultClient(handler);
             return GrpcChannel.ForAddress(client.BaseAddress, new GrpcChannelOptions
             {
                 HttpClient = client
             });
         }
 
-        private class ResponseVersionHandler : DelegatingHandler
+    }
+    
+    internal class ResponseVersionHandler : DelegatingHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
         {
-            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-                CancellationToken cancellationToken)
-            {
-                var response = await base.SendAsync(request, cancellationToken);
-                response.Version = request.Version;
+            var response = await base.SendAsync(request, cancellationToken);
+            response.Version = request.Version;
 
-                return response;
-            }
+            return response;
         }
     }
 }
