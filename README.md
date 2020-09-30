@@ -10,6 +10,7 @@ Request message validator middleware for [Grpc.AspNetCore](https://github.com/gr
 
 - Support async validation for unary, streaming call
 - Support IoC LifeStyle scopes and dependency injection
+- Profile for validators
 
 ## How to use.
 
@@ -67,6 +68,32 @@ public class Startup
         services.AddInlineValidator<HelloRequest>(rules => rules.RuleFor(request => request.Name).NotEmpty());
     }
     // ...
+}
+```
+
+
+#### Profiling validators
+
+If you don't want to make a mess your startup class by registering validators, you implement validator profile and use it.
+
+```cs
+public class SampleProfile : ValidatorProfileBase
+{
+    public SampleProfile()
+    {
+        CreateInlineValidator<SampleRequest>()
+            .RuleFor(r => r.Data).NotNull().NotEmpty()
+            .RuleFor(r => r.Name).NotNull();
+        AddValidator<SampleRequestValidator>();
+        AddValidator<SampleRequestValidator>(ServiceLifetime.Singleton);
+    }
+}
+
+// Then in your Startup class
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddGrpc(options => options.EnableMessageValidation());
+    services.AddValidatorProfile<SampleProfile>();
 }
 ```
 

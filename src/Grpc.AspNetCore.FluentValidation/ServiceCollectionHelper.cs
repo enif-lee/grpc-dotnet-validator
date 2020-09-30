@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using FluentValidation;
 using Grpc.AspNetCore.FluentValidation.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,20 +23,11 @@ namespace Grpc.AspNetCore.FluentValidation
         /// <returns></returns>
         /// <exception cref="AggregateException">When try to register along validator class.</exception>
         public static IServiceCollection AddValidator<TValidator>(this IServiceCollection services,
-            ServiceLifetime lifetime = ServiceLifetime.Scoped) where TValidator : class
+            ServiceLifetime lifetime = ServiceLifetime.Scoped) where TValidator : class, IValidator
         {
             AddGrpcValidatorCore(services);
-            var implementationType = typeof(TValidator);
-            var validatorType = implementationType.GetInterfaces().FirstOrDefault(t =>
-                t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IValidator<>));
-
-            if (validatorType == null)
-                throw new AggregateException(implementationType.Name + "is not implement with IValidator<>.");
-
-            var messageType = validatorType.GetGenericArguments().First();
-            var serviceType = typeof(IValidator<>).MakeGenericType(messageType);
-
-            services.Add(new ServiceDescriptor(serviceType, implementationType, lifetime));
+            var serviceType = TypeHelper.GetServiceTypeFromValidatorTYpe<TValidator>();
+            services.TryAdd(new ServiceDescriptor(serviceType, typeof(TValidator), lifetime));
             return services;
         }
 
@@ -53,6 +43,32 @@ namespace Grpc.AspNetCore.FluentValidation
         {
             AddGrpcValidatorCore(services);
             services.AddSingleton<IValidator<TMessage>>(new InlineValidator<TMessage>(validator));
+            return services;
+        }
+
+        /// <summary>
+        ///     Add validator profile
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="profile">profile instance</param>
+        /// <returns></returns>
+        public static IServiceCollection AddValidatorProfile(this IServiceCollection services, ValidatorProfileBase profile)
+        {
+            AddGrpcValidatorCore(services);
+            services.Add(profile.Validators);
+            return services;
+        }
+
+        /// <summary>
+        ///     Add validator profile
+        /// </summary>
+        /// <param name="services"></param>
+        /// <typeparam name="TProfile">validator profile type</typeparam>
+        /// <returns></returns>
+        public static IServiceCollection AddValidatorProfile<TProfile>(this IServiceCollection services)
+            where TProfile : ValidatorProfileBase, new()
+        {
+            services.AddValidatorProfile(new TProfile());
             return services;
         }
     }
