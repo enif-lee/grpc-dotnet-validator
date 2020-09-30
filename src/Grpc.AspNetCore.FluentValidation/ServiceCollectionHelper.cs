@@ -3,24 +3,16 @@ using System.Linq;
 using FluentValidation;
 using Grpc.AspNetCore.FluentValidation.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Grpc.AspNetCore.FluentValidation
 {
     public static class ServiceCollectionHelper
     {
-        /// <summary>
-        ///     Add default component for validating grpc messages
-        /// </summary>
-        /// <param name="services">service collection</param>
-        /// <returns>service collection</returns>
-        public static IServiceCollection AddGrpcValidation(this IServiceCollection services)
+        private static void AddGrpcValidatorCore(IServiceCollection services)
         {
-            services.AddScoped<IValidatorLocator>(provider => new ServiceCollectionValidationProvider(provider));
-            
-            if (services.All(r => r.ServiceType != typeof(IValidatorErrorMessageHandler)))
-                services.AddSingleton<IValidatorErrorMessageHandler, DefaultErrorMessageHandler>();
-
-            return services;
+            services.TryAddScoped<IValidatorLocator>(provider => new ServiceCollectionValidationProvider(provider));
+            services.TryAddSingleton<IValidatorErrorMessageHandler, DefaultErrorMessageHandler>();
         }
 
         /// <summary>
@@ -34,6 +26,7 @@ namespace Grpc.AspNetCore.FluentValidation
         public static IServiceCollection AddValidator<TValidator>(this IServiceCollection services,
             ServiceLifetime lifetime = ServiceLifetime.Scoped) where TValidator : class
         {
+            AddGrpcValidatorCore(services);
             var implementationType = typeof(TValidator);
             var validatorType = implementationType.GetInterfaces().FirstOrDefault(t =>
                 t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IValidator<>));
@@ -58,6 +51,7 @@ namespace Grpc.AspNetCore.FluentValidation
         public static IServiceCollection AddInlineValidator<TMessage>(this IServiceCollection services, 
             Action<AbstractValidator<TMessage>> validator)
         {
+            AddGrpcValidatorCore(services);
             services.AddSingleton<IValidator<TMessage>>(new InlineValidator<TMessage>(validator));
             return services;
         }

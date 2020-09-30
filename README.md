@@ -8,7 +8,7 @@ Request message validator middleware for [Grpc.AspNetCore](https://github.com/gr
 
 ## Feature
 
-- Support async validation
+- Support async validation for unary, streaming call
 - Support IoC LifeStyle scopes and dependency injection
 
 ## How to use.
@@ -39,10 +39,6 @@ public class Startup
         // 2. Add custom validators for messages, default scope is scope.
         services.AddValidator<HelloRequestValidator>();
         services.AddValidator<HelloRequestValidator>(LifeStyle.Singleton);
-
-        // 3. Add Validator locator, if you didn't satisfy container based locator,
-        // You just implement IValidatorLocator and register as service. 
-        services.AddGrpcValidation();
     }
     // ...
 }
@@ -69,10 +65,6 @@ public class Startup
 
         // 2. Add inline validators for messages, scope is always singleton
         services.AddInlineValidator<HelloRequest>(rules => rules.RuleFor(request => request.Name).NotEmpty());
-
-        // 3. Add Validator locator, if you didn't satisfy container based locator,
-        // You just implement IValidatorLocator and register as service. 
-        services.AddGrpcValidation();
     }
     // ...
 }
@@ -99,14 +91,11 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddGrpc(options => options.EnableMessageValidation());
-        services.AddInlineValidator<HelloRequest>(rules => rules.RuleFor(request => request.Name).NotEmpty());
 
-        // 1. Just put at service collection your own custom message handler that implement IValidatorErrorMessageHnadler.
-        // This should be placed before calling AddGrpcValidation();
+        // Just put at service collection your own custom message handler that implement IValidatorErrorMessageHnadler.
+        // This should be placed before calling AddInlineValidator() or AddValidator();
         services.AddSingleton<IValidatorErrorMessageHanlder>(new CustomMessageHandler())
-
-        // If yor don't reigster any message handler, AddGrpcValidation register default message handler.  
-        services.AddGrpcValidation();
+        services.AddInlineValidator<HelloRequest>(rules => rules.RuleFor(request => request.Name).NotEmpty());
     }
     // ...
 }

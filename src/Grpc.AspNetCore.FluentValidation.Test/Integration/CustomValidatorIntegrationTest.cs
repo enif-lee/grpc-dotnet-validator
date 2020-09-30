@@ -18,7 +18,6 @@ namespace Grpc.AspNetCore.FluentValidation.Test.Integration
                 .WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
                 {
                     services.AddValidator<HelloRequestValidator>();
-                    services.AddGrpcValidation();
                 }));
         }
 
