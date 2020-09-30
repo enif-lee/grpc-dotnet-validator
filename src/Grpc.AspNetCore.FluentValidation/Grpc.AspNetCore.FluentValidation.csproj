@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="../build/version.props" />
+    <Import Project="../../build/version.props" />
     <PropertyGroup>
         <PackageId>GrpcExtensions.AspNetCore.Validation</PackageId>
         <Authors>Jinseoung Lee</Authors>
