@@ -1,0 +1,26 @@
+name: Deploy nuget
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - build/version.props
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.101
+      - name: Install dependencies
+        run: dotnet restore
+        working-directory: src
+      - name: Build solution
+        run: dotnet build --no-restore
+        working-directory: src
+      - name: Deploy nuget package to nuget
+        run: dotnet nuget push *\bin\**\*.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+        working-directory: src
