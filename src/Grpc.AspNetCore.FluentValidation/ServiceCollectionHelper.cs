@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 using FluentValidation;
 using Grpc.AspNetCore.FluentValidation.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +71,67 @@ namespace Grpc.AspNetCore.FluentValidation
             where TProfile : ValidatorProfileBase, new()
         {
             services.AddValidatorProfile(new TProfile());
+            return services;
+        }
+        
+                /// <summary>
+        /// Adds all validators in specified assemblies
+        /// </summary>
+        /// <param name="services">The collection of services</param>
+        /// <param name="assembly">The assemblies to scan</param>
+        /// <param name="lifetime">The lifetime of the validators. The default is transient</param>
+        /// <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+        /// <returns></returns>
+        public static IServiceCollection AddValidatorsFromAssemblies(this IServiceCollection services, IEnumerable<Assembly> assemblies, ServiceLifetime lifetime = ServiceLifetime.Transient, Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) {
+            foreach (var assembly in assemblies)
+                services.AddValidatorsFromAssembly(assembly, lifetime, filter);
+
+            return services;
+        }
+        
+        /// <summary>
+        /// Adds all validators in specified assembly
+        /// </summary>
+        /// <param name="services">The collection of services</param>
+        /// <param name="assembly">The assembly to scan</param>
+        /// <param name="lifetime">The lifetime of the validators. The default is transient</param>
+        /// <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+        /// <returns></returns>
+        public static IServiceCollection AddValidatorsFromAssembly(this IServiceCollection services, Assembly assembly, ServiceLifetime lifetime = ServiceLifetime.Transient, Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) {
+            AddGrpcValidatorCore(services);
+            AssemblyScanner
+                .FindValidatorsInAssembly(assembly)
+                .ForEach(scanResult => services.AddScanResult(scanResult, lifetime, filter));
+
+            return services;
+        }
+        
+        /// <summary>
+        /// Helper method to register a validator from an AssemblyScanner result
+        /// </summary>
+        /// <param name="services">The collection of services</param>
+        /// <param name="scanResult">The scan result</param>
+        /// <param name="lifetime">The lifetime of the validators. The default is transient</param>
+        /// <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+        /// <returns></returns>
+        private static IServiceCollection AddScanResult(this IServiceCollection services, AssemblyScanner.AssemblyScanResult scanResult, ServiceLifetime lifetime, Func<AssemblyScanner.AssemblyScanResult, bool> filter) {
+            bool shouldRegister = filter?.Invoke(scanResult) ?? true;
+            if (shouldRegister) {
+                //Register as interface
+                services.Add(
+                    new ServiceDescriptor(
+                        serviceType: scanResult.InterfaceType,
+                        implementationType: scanResult.ValidatorType,
+                        lifetime: lifetime));
+
+                //Register as self
+                services.Add(
+                    new ServiceDescriptor(
+                        serviceType: scanResult.ValidatorType,
+                        implementationType: scanResult.ValidatorType,
+                        lifetime: lifetime));
+            }
+
             return services;
         }
     }
