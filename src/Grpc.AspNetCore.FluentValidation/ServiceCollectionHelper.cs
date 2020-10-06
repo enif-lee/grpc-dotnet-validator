@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using FluentValidation;
 using Grpc.AspNetCore.FluentValidation.Internal;
@@ -73,19 +74,36 @@ namespace Grpc.AspNetCore.FluentValidation
             services.AddValidatorProfile(new TProfile());
             return services;
         }
-        
-                /// <summary>
-        /// Adds all validators in specified assemblies
+
+        /// <summary>
+        /// Adds all validators from calling assembly 
         /// </summary>
         /// <param name="services">The collection of services</param>
-        /// <param name="assembly">The assemblies to scan</param>
         /// <param name="lifetime">The lifetime of the validators. The default is transient</param>
         /// <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
         /// <returns></returns>
-        public static IServiceCollection AddValidatorsFromAssemblies(this IServiceCollection services, IEnumerable<Assembly> assemblies, ServiceLifetime lifetime = ServiceLifetime.Transient, Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) {
+        public static IServiceCollection AddValidatorsFromAssemblies(this IServiceCollection services, 
+            ServiceLifetime lifetime = ServiceLifetime.Transient, 
+            Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) 
+        {
+            return services.AddValidatorsFromAssembly(Assembly.GetCallingAssembly(), lifetime, filter);
+        }
+        
+        /// <summary>
+        /// Adds all validators in specified assemblies
+        /// </summary>
+        /// <param name="services">The collection of services</param>
+        /// <param name="assemblies">The assemblies to scan</param>
+        /// <param name="lifetime">The lifetime of the validators. The default is transient</param>
+        /// <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
+        /// <returns></returns>
+        public static IServiceCollection AddValidatorsFromAssemblies(this IServiceCollection services, 
+            IEnumerable<Assembly> assemblies, 
+            ServiceLifetime lifetime = ServiceLifetime.Transient, 
+            Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) 
+        {
             foreach (var assembly in assemblies)
                 services.AddValidatorsFromAssembly(assembly, lifetime, filter);
-
             return services;
         }
         
@@ -97,39 +115,46 @@ namespace Grpc.AspNetCore.FluentValidation
         /// <param name="lifetime">The lifetime of the validators. The default is transient</param>
         /// <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
         /// <returns></returns>
-        public static IServiceCollection AddValidatorsFromAssembly(this IServiceCollection services, Assembly assembly, ServiceLifetime lifetime = ServiceLifetime.Transient, Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) {
+        public static IServiceCollection AddValidatorsFromAssembly(this IServiceCollection services, 
+            Assembly assembly, 
+            ServiceLifetime lifetime = ServiceLifetime.Transient, 
+            Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) 
+        {
             AddGrpcValidatorCore(services);
-            AssemblyScanner
-                .FindValidatorsInAssembly(assembly)
-                .ForEach(scanResult => services.AddScanResult(scanResult, lifetime, filter));
-
+            foreach (var scanResult in AssemblyScanner.FindValidatorsInAssembly(assembly).Where(filter ?? (_ => true)))
+            {
+                services.Add(new ServiceDescriptor(scanResult.InterfaceType, scanResult.ValidatorType, lifetime));
+                services.Add(new ServiceDescriptor(scanResult.ValidatorType, scanResult.ValidatorType, lifetime));
+            }
             return services;
         }
-        
-        /// <summary>
-        /// Helper method to register a validator from an AssemblyScanner result
-        /// </summary>
-        /// <param name="services">The collection of services</param>
-        /// <param name="scanResult">The scan result</param>
-        /// <param name="lifetime">The lifetime of the validators. The default is transient</param>
-        /// <param name="filter">Optional filter that allows certain types to be skipped from registration.</param>
-        /// <returns></returns>
-        private static IServiceCollection AddScanResult(this IServiceCollection services, AssemblyScanner.AssemblyScanResult scanResult, ServiceLifetime lifetime, Func<AssemblyScanner.AssemblyScanResult, bool> filter) {
-            bool shouldRegister = filter?.Invoke(scanResult) ?? true;
-            if (shouldRegister) {
-                //Register as interface
-                services.Add(
-                    new ServiceDescriptor(
-                        serviceType: scanResult.InterfaceType,
-                        implementationType: scanResult.ValidatorType,
-                        lifetime: lifetime));
 
-                //Register as self
-                services.Add(
-                    new ServiceDescriptor(
-                        serviceType: scanResult.ValidatorType,
-                        implementationType: scanResult.ValidatorType,
-                        lifetime: lifetime));
+
+        /// <summary>
+        ///     Add all profiles from calling assembly.
+        /// </summary>
+        /// <param name="services">The collection of services.</param>
+        /// <returns></returns>
+        public static IServiceCollection AddProfilesFromAssembly(this IServiceCollection services)
+        {
+            return services.AddProfilesFromAssembly(Assembly.GetCallingAssembly());
+        }
+
+        /// <summary>
+        ///     Add all profiles from specific assembly.
+        /// </summary>
+        /// <param name="services">The collection of services.</param>
+        /// <param name="assembly">Assembly to find profiles.</param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public static IServiceCollection AddProfilesFromAssembly(this IServiceCollection services, Assembly assembly)
+        {
+            foreach (var type in assembly.GetTypes().Where(type => type.IsClass && typeof(ValidatorProfileBase).IsAssignableFrom(type)))
+            {
+                if (type.GetConstructors().All(c => c.GetParameters().Length != 0))
+                    throw new InvalidOperationException("All profile class should have constructor without any parameters.");
+
+                services.AddValidatorProfile((ValidatorProfileBase) Activator.CreateInstance(type));
             }
 
             return services;
