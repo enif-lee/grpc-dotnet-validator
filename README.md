@@ -11,6 +11,7 @@ Request message validator middleware for [Grpc.AspNetCore](https://github.com/gr
 - Support async validation for unary, streaming call
 - Support IoC LifeStyle scopes and dependency injection
 - Profile for validators
+- Scan validators and profiles from assembly
 
 ## How to use.
 
