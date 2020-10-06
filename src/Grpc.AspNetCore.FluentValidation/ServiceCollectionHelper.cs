@@ -28,9 +28,21 @@ namespace Grpc.AspNetCore.FluentValidation
         public static IServiceCollection AddValidator<TValidator>(this IServiceCollection services,
             ServiceLifetime lifetime = ServiceLifetime.Scoped) where TValidator : class, IValidator
         {
+            return AddValidator(services, typeof(TValidator), lifetime);
+        }
+
+        /// <summary>
+        ///     Add custom message validator.
+        /// </summary>
+        /// <param name="services">service collection</param>
+        /// <param name="lifetime">specific life time for validator</param>
+        /// <param name="validatorType">custom validator type</param>
+        /// <returns></returns>
+        public static IServiceCollection AddValidator(this IServiceCollection services, Type validatorType,
+            ServiceLifetime lifetime = ServiceLifetime.Scoped)
+        {
             AddGrpcValidatorCore(services);
-            var serviceType = TypeHelper.GetServiceTypeFromValidatorTYpe<TValidator>();
-            services.TryAdd(new ServiceDescriptor(serviceType, typeof(TValidator), lifetime));
+            services.TryAdd(new ServiceDescriptor(TypeHelper.GetServiceTypeFromValidatorType(validatorType), validatorType, lifetime));
             return services;
         }
 
@@ -120,12 +132,8 @@ namespace Grpc.AspNetCore.FluentValidation
             ServiceLifetime lifetime = ServiceLifetime.Transient, 
             Func<AssemblyScanner.AssemblyScanResult, bool> filter = null) 
         {
-            AddGrpcValidatorCore(services);
             foreach (var scanResult in AssemblyScanner.FindValidatorsInAssembly(assembly).Where(filter ?? (_ => true)))
-            {
-                services.Add(new ServiceDescriptor(scanResult.InterfaceType, scanResult.ValidatorType, lifetime));
-                services.Add(new ServiceDescriptor(scanResult.ValidatorType, scanResult.ValidatorType, lifetime));
-            }
+                services.AddValidator(scanResult.ValidatorType);
             return services;
         }
 

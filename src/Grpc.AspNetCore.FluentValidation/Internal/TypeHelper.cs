@@ -6,10 +6,9 @@ namespace Grpc.AspNetCore.FluentValidation.Internal
 {
     internal static class TypeHelper
     {
-        public static Type GetServiceTypeFromValidatorTYpe<TService>() where TService : class, IValidator
+        public static Type GetServiceTypeFromValidatorType(Type type)
         {
-            var type = typeof(TService);
-            var validatorType =  type.GetInterfaces()
+            var validatorType = type.GetInterfaces()
                 .FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IValidator<>));
 
             if (validatorType == null)
