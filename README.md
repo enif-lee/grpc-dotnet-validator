@@ -97,6 +97,46 @@ public void ConfigureServices(IServiceCollection services)
 }
 ```
 
+#### Scan and register profiles/validators from assembly.
+
+
+```cs
+// Place somewhere validator or profile class.
+public class HelloRequestValidator : AbstractValidator<HelloRequest>
+{
+    public HelloRequestValidator()
+    {
+        RuleFor(request => request.Name).NotEmpty();
+    }
+}
+
+public class SampleProfile : ValidatorProfileBase
+{
+    public SampleProfile()
+    {
+        CreateInlineValidator<SampleRequest>()
+            .RuleFor(r => r.Data).NotNull().NotEmpty()
+            .RuleFor(r => r.Name).NotNull();
+        AddValidator<SampleRequestValidator>();
+        AddValidator<SampleRequestValidator>(ServiceLifetime.Singleton);
+    }
+}
+
+// Then in your Startup class
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddGrpc(options => options.EnableMessageValidation());
+
+    // Scan profile and validators from calling assembly.
+    services.AddValidatorsFromAssemblies(); 
+    services.AddProfilesFromAssembly();
+
+    // Scan profiles and validators from specific assembly.
+    services.AddValidatorsFromAssemblies(typeof(InternalLibarary).Assembly); 
+    services.AddProfilesFromAssembly(typeof(InternalLibarary).Assembly);
+}
+```
+
 
 #### Customize validation failure message.
 
