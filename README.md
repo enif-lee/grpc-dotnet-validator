@@ -38,6 +38,7 @@ public class Startup
         services.AddGrpc(options => options.EnableMessageValidation());
 
         // 2. Add custom validators for messages, default scope is scope.
+        services.AddValidator(typeof(HelloRequestValidator));
         services.AddValidator<HelloRequestValidator>();
         services.AddValidator<HelloRequestValidator>(LifeStyle.Singleton);
     }
