@@ -31,7 +31,7 @@ public class Startup
     // ...
 }
 ```
-
+123123
 Then, If the message is invalid, Grpc Validator return with `InvalidArgument` code and empty message object.
 
 
